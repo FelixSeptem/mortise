@@ -12,7 +12,7 @@ import (
 
 // Mutex manager to del with full lock process
 type MutexManager struct {
-	conn redis.Conn
+	Conn redis.Conn
 	Name string // shall be genaral unique
 	mu   sync.Mutex
 }
@@ -30,7 +30,7 @@ func (m *MutexManager) getResourceKey(key string) string {
 // generate a fencing token
 func (m *MutexManager) generateFencingToken() (int64, error) {
 	fencingTokenKey := m.getFencingTokenKey()
-	return redis.Int64(m.conn.Do("INCR", fencingTokenKey))
+	return redis.Int64(m.Conn.Do("INCR", fencingTokenKey))
 }
 
 // use fencing token to acquire lock
@@ -42,7 +42,7 @@ func (m *MutexManager) Lock(key string, expiredTime time.Duration) (int64, error
 	if err != nil {
 		return 0, &ErrRedis{err: err}
 	}
-	resp, err := lockScript.Do(m.conn, resourceKey, fencingToken, int(expiredTime/time.Millisecond))
+	resp, err := lockScript.Do(m.Conn, resourceKey, fencingToken, int(expiredTime/time.Millisecond))
 	if err != nil {
 		return 0, &ErrRedis{err: err}
 	}
@@ -64,7 +64,7 @@ func (m *MutexManager) Unlock(key string, fencingToken int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	resourceKey := m.getResourceKey(key)
-	resp, err := unlockScript.Do(m.conn, resourceKey, fencingToken)
+	resp, err := unlockScript.Do(m.Conn, resourceKey, fencingToken)
 	if err != nil {
 		return &ErrRedis{err: err}
 	}
@@ -87,7 +87,24 @@ func (m *MutexManager) Unlock(key string, fencingToken int64) error {
 // check current fencing token
 func (m *MutexManager) GetCurrentFencingToken(key string) (int64, error) {
 	resourceKey := m.getResourceKey(key)
-	return redis.Int64(m.conn.Do("GET", resourceKey))
+	return redis.Int64(m.Conn.Do("GET", resourceKey))
+}
+
+// compare lock token and given token
+func (m *MutexManager) CheckCurrentFencingToken(key string, givenToken int64) (bool, error) {
+	resourceKey := m.getResourceKey(key)
+	lockedToken, err := redis.Int64(m.Conn.Do("GET", resourceKey))
+	if err != nil {
+		return false, err
+	}
+	switch {
+	case lockedToken > givenToken:
+		return false, &ErrOutdatedToken{currentToken: lockedToken, holdToken: givenToken}
+	case lockedToken < givenToken:
+		return false, &ErrMutexOccupied{currentToken: lockedToken, holdToken: givenToken}
+	default:
+		return true, nil
+	}
 }
 
 var lockScript = redis.NewScript(1, `

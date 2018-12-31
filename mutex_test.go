@@ -13,7 +13,7 @@ func TestMutexManager_Lock(t *testing.T) {
 		t.Fatal(err)
 	}
 	mutexMgr := MutexManager{
-		conn: conn,
+		Conn: conn,
 		Name: "test",
 	}
 	key := fmt.Sprintf("test-%d", time.Now().UnixNano()/1000)
@@ -33,7 +33,7 @@ func TestMutexManager_Unlock(t *testing.T) {
 		t.Fatal(err)
 	}
 	mutexMgr := MutexManager{
-		conn: conn,
+		Conn: conn,
 		Name: "test",
 	}
 	key := fmt.Sprintf("test-%d", time.Now().UnixNano()/1000)
@@ -68,7 +68,7 @@ func TestMutexManager_GetCurrentFencingToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	mutexMgr := MutexManager{
-		conn: conn,
+		Conn: conn,
 		Name: "test",
 	}
 	key := fmt.Sprintf("test-%d", time.Now().UnixNano()/1000)
