@@ -44,8 +44,8 @@ before_script:
 # .golangci.yml file at the top level of your repo.
 script:
   - golangci-lint run       # run a bunch of code checkers/linters in parallel
-  - overalls -project=github.com/FelixSeptem/ratelimit -covermode=count -ignore='.git,_vendor'
-  - goveralls -coverprofile=overalls.coverprofile -service=travis-ci -repotoken $COVERALLS_TOKEN
+  - overalls -project=github.com/FelixSeptem/mortise -covermode=count -ignore='.git,_vendor'
+  - goveralls -coverprofile=coveralls.coverprofile -service=travis-ci -repotoken $COVERALLS_TOKEN
   - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...  # Run all the tests with the race detector enabled
 
 after_success:

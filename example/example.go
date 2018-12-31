@@ -40,7 +40,7 @@ func main() {
 	}
 	resourceKey := fmt.Sprintf("Sync:%d", time.Now().UnixNano())
 	for i := 0; i < 100; i++ {
-		if err:=job(&mutexMgr, resourceKey);err!=nil{
+		if err := job(&mutexMgr, resourceKey); err != nil {
 			fmt.Println(err)
 		}
 	}
