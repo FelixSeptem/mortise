@@ -6,7 +6,7 @@ language: go
 
 # Force-enable Go modules. This will be unnecessary when Go 1.12 lands.
 env:
-  - GO111MODULE=on
+  - GO111MODULE=on COVERALLS_TOKEN=7AL19xAdpZ7BDidNiWSPBGeJDr9FSRS9n
 
 services:
   - redis-server
