@@ -85,3 +85,65 @@ func TestMutexManager_GetCurrentFencingToken(t *testing.T) {
 		t.Errorf("expect %d got %d", ft, gotft)
 	}
 }
+
+func BenchmarkMutexManager_Lock(b *testing.B) {
+	b.StopTimer()
+	conn, err := redis.Dial("tcp", "localhost:6379")
+	if err != nil {
+		b.Fatal(err)
+	}
+	mutexMgr := MutexManager{
+		Conn: conn,
+		Name: "test",
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("bench:%d", time.Now().UnixNano()/1000)
+		if _, err := mutexMgr.Lock(key, 10*time.Millisecond); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkMutexManager_Unlock(b *testing.B) {
+	b.StopTimer()
+	conn, err := redis.Dial("tcp", "localhost:6379")
+	if err != nil {
+		b.Fatal(err)
+	}
+	mutexMgr := MutexManager{
+		Conn: conn,
+		Name: "test",
+	}
+	for i := 0; i < 10000; i++ {
+		key := fmt.Sprintf("bench:%d", i)
+		if _, err := mutexMgr.Lock(key, time.Second*3); err != nil {
+			b.Log(err)
+		}
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("bench:%d", i)
+		if err := mutexMgr.Unlock(key, int64(i)); err != nil {
+			b.Log(err)
+		}
+	}
+}
+
+func BenchmarkMutexManager_GetCurrentFencingToken(b *testing.B) {
+	b.StopTimer()
+	conn, err := redis.Dial("tcp", "localhost:6379")
+	if err != nil {
+		b.Fatal(err)
+	}
+	mutexMgr := MutexManager{
+		Conn: conn,
+		Name: "test",
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := mutexMgr.GetCurrentFencingToken("bench"); err != nil {
+			b.Log(err)
+		}
+	}
+}

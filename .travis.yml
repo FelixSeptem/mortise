@@ -47,6 +47,7 @@ script:
   - overalls -project=github.com/FelixSeptem/mortise -covermode=count -ignore='.git,_vendor'
   - goveralls -coverprofile=coveralls.coverprofile -service=travis-ci -repotoken $COVERALLS_TOKEN
   - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...  # Run all the tests with the race detector enabled
+  - go test -run none -bench . -benchtime 1s -benchmem
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
