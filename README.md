@@ -11,10 +11,13 @@ a lock service with single node redis and fencing token
 go get -u github.com/FelixSeptem/mortise
 ```
 
+### Use example
+[example](https://github.com/FelixSeptem/mortise/blob/master/example/example.go)
+
 ### Design
 [文章链接](https://www.jianshu.com/p/73512e7730fd)
 
 ### Related Link
-https://redis.io/topics/distlock
-http://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html
-http://antirez.com/news/101
+- https://redis.io/topics/distlock
+- http://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html
+- http://antirez.com/news/101
