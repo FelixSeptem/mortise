@@ -79,6 +79,7 @@ func (m *MutexManager) Lock(key string, expiredTime time.Duration) (int64, error
 				return ft, err
 			}
 		}
+		time.Sleep(m.expiry)
 	}
 	return fencingToken, nil
 }
