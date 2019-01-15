@@ -62,6 +62,23 @@ func TestMutexManager_Unlock(t *testing.T) {
 	}
 }
 
+func TestMutexManager_SetRetries(t *testing.T) {
+	conn, err := redis.Dial("tcp", "localhost:6379")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutexMgr := MutexManager{
+		Conn: conn,
+		Name: "test",
+	}
+	key := fmt.Sprintf("test-%d", time.Now().UnixNano()/1000)
+	mutexMgr.SetRetries(3, time.Millisecond*50)
+	_, err = mutexMgr.Lock(key, time.Millisecond*300)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestMutexManager_GetCurrentFencingToken(t *testing.T) {
 	conn, err := redis.Dial("tcp", "localhost:6379")
 	if err != nil {
