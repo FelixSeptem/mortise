@@ -45,12 +45,11 @@ func (m *MutexManager) SetRetries(retries int, expiry time.Duration) {
 func (m *MutexManager) Lock(key string, expiredTime time.Duration) (int64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	resourceKey := m.getResourceKey(key)
-	fencingToken, err := m.generateFencingToken()
-	if err != nil {
-		return 0, &ErrRedis{err: err}
-	}
-	doLock := func() (int64, error) {
+	doLock := func(resourceKey string) (int64, error) {
+		fencingToken, err := m.generateFencingToken()
+		if err != nil {
+			return 0, &ErrRedis{err: err}
+		}
 		resp, err := lockScript.Do(m.Conn, resourceKey, fencingToken, int(expiredTime/time.Millisecond))
 		if err != nil {
 			return 0, &ErrRedis{err: err}
@@ -67,21 +66,22 @@ func (m *MutexManager) Lock(key string, expiredTime time.Duration) (int64, error
 		}
 		return fencingToken, nil
 	}
+	resourceKey := m.getResourceKey(key)
 	if m.retries <= 0 {
-		return doLock()
+		return doLock(resourceKey)
 	}
 	for v := m.retries; v > 0; v -= 1 {
-		ft, err := doLock()
+		time.Sleep(m.expiry)
+		ft, err := doLock(resourceKey)
 		if err == nil {
 			return ft, nil
 		} else {
-			if v <= 0 {
+			if v <= 1 {
 				return ft, err
 			}
 		}
-		time.Sleep(m.expiry)
 	}
-	return fencingToken, nil
+	return 0, nil
 }
 
 // unlock:get compare and del key
