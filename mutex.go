@@ -12,9 +12,11 @@ import (
 
 // Mutex manager to del with full lock process
 type MutexManager struct {
-	Conn redis.Conn
-	Name string // shall be genaral unique
-	mu   sync.Mutex
+	Conn    redis.Conn
+	Name    string // shall be genaral unique
+	mu      sync.Mutex
+	retries int
+	expiry  time.Duration
 }
 
 // Generate a key to store resource fencing token
@@ -33,6 +35,12 @@ func (m *MutexManager) generateFencingToken() (int64, error) {
 	return redis.Int64(m.Conn.Do("INCR", fencingTokenKey))
 }
 
+// set retry times and expiry time for each retry(this setting just  for lock operation)
+func (m *MutexManager) SetRetries(retries int, expiry time.Duration) {
+	m.retries = retries
+	m.expiry = expiry
+}
+
 // use fencing token to acquire lock
 func (m *MutexManager) Lock(key string, expiredTime time.Duration) (int64, error) {
 	m.mu.Lock()
@@ -42,19 +50,35 @@ func (m *MutexManager) Lock(key string, expiredTime time.Duration) (int64, error
 	if err != nil {
 		return 0, &ErrRedis{err: err}
 	}
-	resp, err := lockScript.Do(m.Conn, resourceKey, fencingToken, int(expiredTime/time.Millisecond))
-	if err != nil {
-		return 0, &ErrRedis{err: err}
-	}
-	if resp == "OK" {
+	doLock := func() (int64, error) {
+		resp, err := lockScript.Do(m.Conn, resourceKey, fencingToken, int(expiredTime/time.Millisecond))
+		if err != nil {
+			return 0, &ErrRedis{err: err}
+		}
+		if resp == "OK" {
+			return fencingToken, nil
+		}
+		lToken, err := toInt64(resp)
+		if err != nil {
+			return 0, err
+		}
+		if err := processFencingToken(lToken, fencingToken); err != nil && lToken != 0 {
+			return 0, err
+		}
 		return fencingToken, nil
 	}
-	lToken, err := toInt64(resp)
-	if err != nil {
-		return 0, err
+	if m.retries <= 0 {
+		return doLock()
 	}
-	if err := processFencingToken(lToken, fencingToken); err != nil && lToken != 0 {
-		return 0, err
+	for v := m.retries; v > 0; v -= 1 {
+		ft, err := doLock()
+		if err == nil {
+			return ft, nil
+		} else {
+			if v <= 0 {
+				return ft, err
+			}
+		}
 	}
 	return fencingToken, nil
 }
